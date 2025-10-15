@@ -1,5 +1,9 @@
 import os
 from googleapiclient.http import MediaIoBaseDownload
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent.parent
+DOWNLOAD_DIR = BASE_DIR / "files"
 
 
 # function to print list all audio files in Google Drive
@@ -16,9 +20,12 @@ def list_audio_files(service, folder_id: str) -> str:
 
 # function to download audio files from Google Drive
 def download_file(service, file_id, file_name: str):
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    file_path = os.path.join(DOWNLOAD_DIR, file_name)
+
     request = service.files().get_media(fileId=file_id)
 
-    with open(file_name, "wb") as f:
+    with open(file_path, "wb") as f:
         downloader = MediaIoBaseDownload(f, request)
         done = False
         while not done:
