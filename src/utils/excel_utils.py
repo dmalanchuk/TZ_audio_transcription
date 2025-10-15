@@ -129,10 +129,15 @@ def write_to_excel(row_data: dict):
     """
         added row to Excel
     """
+
+    # open excel file and active sheet
     wb = load_workbook(EXCEL_PATH)
     ws = wb.active
 
+    # write row to excel
     start_row = ws.max_row + 1
+
+    # for loop for writing row data
     for col_idx, key in enumerate(row_data.keys(), start=1):
         cell = ws.cell(row=start_row, column=col_idx, value=row_data[key])
         if key == "Коментар" and "не ок" in row_data[key]:
