@@ -1,41 +1,39 @@
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
-from src import config
 import os
-
-# connect to Google Drive
-credentials = service_account.Credentials.from_service_account_file(
-    config.SERVICE_ACCOUNT_FILE, scopes=['https://www.googleapis.com/auth/drive']
-)
-service = build('drive', 'v3', credentials=credentials)
+from googleapiclient.http import MediaIoBaseDownload
 
 
 # function to print list all audio files in Google Drive
-def list_audio_files():
-    results = service.files().list(fields="files(id, name)").execute()
-    for f in results.get('files', []):
-        print(f['name'])
+def list_audio_files(service, folder_id: str) -> str:
+    query = f"'{folder_id}' in parents and (mimeType contains 'audio/' or name contains '.mp3' or name contains '.wav')"
+
+    results = service.files().list(
+        q=query,
+        fields="files(id, name)"
+    ).execute()
+
+    return results.get("files", [])
 
 
-def download_audio_file(file_id: str, file_name: str) -> str:
+# function to download audio files from Google Drive
+def download_file(service, file_id, file_name: str):
     request = service.files().get_media(fileId=file_id)
-    with open(file_name, 'wb') as f:
+
+    with open(file_name, "wb") as f:
         downloader = MediaIoBaseDownload(f, request)
         done = False
-        while done is False:
-            status, done = downloader.next_chunk()
-            print("Download %d%%." % int(status.progress() * 100))
+        while not done:
+            _, done = downloader.next_chunk()
 
-        return file_name
+    print(f"Downloaded: {file_name}")
 
 
-def upload_text_file(local_path: str, folder_id: str) -> str:
-    file_metadata = {
-        'name': os.path.basename(local_path),
-        'parents': [folder_id]
-    }
-    media = MediaFileUpload(local_path, mimetype='text/plain')
-    service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+# function to save transcript locally
+def save_transcript_locally(file_name: str, content: str) -> str:
+    txt_file_name = os.path.splitext(file_name)[0] + ".txt"
 
-    return f"upload to: {folder_id} success"
+    with open(txt_file_name, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"Saved: {txt_file_name}")
+
+    return txt_file_name
