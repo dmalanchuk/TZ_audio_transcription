@@ -1,20 +1,41 @@
 import whisper
+import os
+import shutil
+import tempfile
 
-model = whisper.load_model("medium")
 
+def transcribe_audio(filename: str, language="Ukrainian") -> str:
+    """
+    transcribe audio file using Whisper model
+    """
+    print(f"Transcription {filename} {language}...")
 
-def transcribe_audio(filename):
-    """Transcription in Ukrainian, model: medium, Whisper"""
-    print(f"Transcription {filename} Ukrainian...")
+    if not os.path.exists(filename):
+        raise FileNotFoundError(f"File not found: {filename}")
 
-    result = model.transcribe(
-        filename,
-        language="uk",  # UA language
-        fp16=False,
-        temperature=0.0,  # for stable results
-        verbose=False
-    )
+    if os.path.getsize(filename) == 0:
+        raise ValueError(f"File is empty: {filename}")
 
-    print(f"Getting text from {filename}")
+    # create temp file
+    temp_dir = tempfile.gettempdir()
+    temp_path = os.path.join(temp_dir, os.path.basename(filename).replace(" ", "_"))
 
-    return result["text"]
+    shutil.copy(filename, temp_path)
+
+    model = whisper.load_model("medium")
+
+    try:
+        result = model.transcribe(
+            temp_path,
+            language=language,
+            verbose=False
+        )
+    except Exception as e:
+        print(f"Whisper error: {e}")
+        raise
+    finally:
+        # delete temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    return result.get("text", "").strip()
